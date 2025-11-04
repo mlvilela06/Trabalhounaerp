@@ -6,6 +6,25 @@
     <title>Green Code - Dashboard de Reciclagem</title>
     <!-- Carrega o Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração do Tailwind para usar o modo escuro baseado na classe 'dark' no HTML -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': {
+                            '50': '#f0fdf4', '100': '#dcfce7', '200': '#bbf7d0', '300': '#86efad', '400': '#4ade80', '500': '#22c55e', '600': '#16a34a', '700': '#15803d', '800': '#166534', '900': '#14532d', '950': '#0f3a21'
+                        },
+                        'secondary': '#2563eb'
+                    }
+                }
+            }
+        }
+    </script>
     <!-- Carrega o React, ReactDOM e Babel para usar JSX no navegador -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -18,7 +37,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #f9fafb;
+            /* Cor de fundo base: Fica sob o controle do tema via JS/Tailwind */
         }
 
         /* CONFIGURAÇÃO AVANÇADA PARA DESKTOP (lg) */
@@ -26,7 +45,6 @@
             #root {
                 display: flex;
                 height: 100vh;
-                /* O conteúdo principal (div.flex-1) deve rolar */
                 overflow: hidden; 
             }
             .sidebar-desktop-fixed {
@@ -41,454 +59,776 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        // GARANTIA DE INICIALIZAÇÃO: O código só rodará após o carregamento completo da página.
+        window.onload = function() {
+            const { useState, useEffect } = React;
+            const root = ReactDOM.createRoot(document.getElementById('root'));
 
-        // --- MOCK DATA (Dados Simulados com base nos prints) ---
-        const mockData = {
-            // Top Metrics
-            metrics: [
-                { id: 1, title: "Material Coletado", value: "45.3 kg", change: "+12%", unit: "vs. mês anterior", color: "text-emerald-500", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM9 12h6m-3-3v6m-3 3h6v-6" },
-                { id: 2, title: "CO2 Evitado", value: "75.0 kg", change: "+18%", unit: "vs. mês anterior", color: "text-blue-500", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM9 12h6m-3-3v6m-3 3h6v-6" },
-                { id: 3, title: "Taxa de Reciclagem", value: "60.0%", goal: "Meta: 85%", color: "text-amber-500", iconPath: "M7 7.5l-4 4 4 4m10-8l4 4-4 4m-4 5h-2v-2h2v2zM6 10h12v4H6v-4z" },
-                { id: 4, title: "Resíduos Ativos", value: "2", total: "3 total", color: "text-purple-500", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM12 8v4l3 3" },
-            ],
-            // Environmental Impact Cards
-            impacts: [
-                { label: "CO2 Evitado", value: "75.0 kg", subtitle: "Efeito Estufa Reduzido", icon: "Leaf", color: "bg-emerald-100/70 text-emerald-600" },
-                { label: "Água Poupadada", value: "173 L", subtitle: "Litros não utilizados", icon: "Droplets", color: "bg-blue-100/70 text-blue-600" },
-                { label: "Energia Poupadada", value: "135.1 kWh", subtitle: "Eletricidade economizada", icon: "Zap", color: "bg-yellow-100/70 text-yellow-600" },
-                { label: "Equiv. Árvores", value: "3.4", subtitle: "Árvores plantadas", icon: "TreePalm", color: "bg-green-100/70 text-green-600" },
-            ],
-            // Recent Activity
-            activities: [
-                { material: "Garrafas PET - Escritório", type: "Plástico", quantity: "15.5kg", location: "Central de Reciclagem Norte", date: "14/12", co2: "-27.9kg CO2" },
-                { material: "Latas de Alumínio", type: "Metal", quantity: "3.7kg", location: "Cooperativa Recicla+", date: "12/12", co2: "-8.1kg CO2" },
-                { material: "Equipamentos Eletrônicos", type: "Eletrônicos", quantity: "5.8kg", location: "Centro de Reciclagem Tech", date: "10/12", co2: "-20.3kg CO2" },
-                { material: "Papel de Escritório", type: "Papel", quantity: "6.2kg", location: "Ponto de Coleta Shopping", date: "13/12", co2: "-9.0kg CO2" },
-                { material: "Vidros diversos", type: "Vidro", quantity: "12.1kg", location: "Ecoponto Vita Verde", date: "11/12", co2: "-9.7kg CO2" },
-            ],
-            // Goals
-            goals: [
-                { name: "Meta de Reciclagem Mensal", progress: 45, goalValue: "45.3 / 100 kg", status: "Em Progresso", color: "bg-amber-500", statusColor: "text-amber-600" },
-                { name: "Redução CO2 Trimestral", progress: 75, goalValue: "75.04 / 200 kg CO2", status: "Em Progresso", color: "bg-blue-500", statusColor: "text-blue-600" },
-                { name: "Eficiência de Coleta", progress: 73, goalValue: "73 / 85 %", status: "Atrasada", color: "bg-red-500", statusColor: "text-red-600" },
-            ],
-            // Status
-            statusPoints: [
-                { name: "Ponto de Coleta Shopping", type: "Reciclagem", active: true, progress: 90 },
-                { name: "Cooperativa Recicla+", type: "Logística", active: true, progress: 50 },
-                { name: "Central de Reciclagem Norte", type: "Reciclagem", active: true, progress: 60 },
-                { name: "São Paulo - CD", type: "Logística", active: false, progress: 40 },
-            ]
-        };
+            // --- MOCK DATA (Dados Simulados) ---
+            const mockData = {
+                // Top Metrics
+                metrics: [
+                    { id: 1, title: "Material Coletado", value: "45.3 kg", change: "+12%", unit: "vs. mês anterior", color: "text-primary-500", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM9 12h6m-3-3v6m-3 3h6v-6" },
+                    { id: 2, title: "CO2 Evitado", value: "75.0 kg", change: "+18%", unit: "vs. mês anterior", color: "text-secondary", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM9 12h6m-3-3v6m-3 3h6v-6" },
+                    { id: 3, title: "Taxa de Reciclagem", value: "60.0%", goal: "Meta: 85%", color: "text-amber-500", iconPath: "M7 7.5l-4 4 4 4m10-8l4 4-4 4m-4 5h-2v-2h2v2zM6 10h12v4H6v-4z" },
+                    { id: 4, title: "Resíduos Ativos", value: "2", total: "3 total", color: "text-purple-500", iconPath: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zM12 8v4l3 3" },
+                ],
+                // Environmental Impact Cards
+                impacts: [
+                    { label: "CO2 Evitado", value: "75.0 kg", subtitle: "Efeito Estufa Reduzido", icon: "Leaf", color: "bg-primary-100/70 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400" },
+                    { label: "Água Poupadada", value: "173 L", subtitle: "Litros não utilizados", icon: "Droplets", color: "bg-blue-100/70 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400" },
+                    { label: "Energia Poupadada", value: "135.1 kWh", subtitle: "Eletricidade economizada", icon: "Zap", color: "bg-yellow-100/70 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-400" },
+                    { label: "Equiv. Árvores", value: "3.4", subtitle: "Árvores plantadas", icon: "TreePalm", color: "bg-green-100/70 text-green-600 dark:bg-green-900/50 dark:text-green-400" },
+                ],
+                // Recent Activity
+                activities: [
+                    { material: "Garrafas PET - Escritório", type: "Plástico", quantity: "15.5kg", location: "Central de Reciclagem Norte", date: "14/12", co2: "-27.9kg CO2" },
+                    { material: "Latas de Alumínio", type: "Metal", quantity: "3.7kg", location: "Cooperativa Recicla+", date: "12/12", co2: "-8.1kg CO2" },
+                    { material: "Equipamentos Eletrônicos", type: "Eletrônicos", quantity: "5.8kg", location: "Centro de Reciclagem Tech", date: "10/12", co2: "-20.3kg CO2" },
+                    { material: "Papel de Escritório", type: "Papel", quantity: "6.2kg", location: "Ponto de Coleta Shopping", date: "13/12", co2: "-9.0kg CO2" },
+                    { material: "Vidros diversos", type: "Vidro", quantity: "12.1kg", location: "Ecoponto Vita Verde", date: "11/12", co2: "-9.7kg CO2" },
+                ],
+                // Business Analytics
+                businessData: [
+                    { id: 1, title: "Lucro Líquido (Mês)", value: "R$ 15.2K", change: "+4.1%", color: "text-primary-500", trend: "up" },
+                    { id: 2, title: "Usuários Ativos (Clientes)", value: "458", change: "+15", color: "text-secondary", trend: "up" },
+                    { id: 3, title: "Visitas no Site", value: "18.9K", change: "-2.5%", color: "text-red-500", trend: "down" },
+                ],
+                // Dados de evolução mensal para o gráfico
+                monthlyEvolution: [
+                    { month: 'Jun', revenue: 10000, cost: 7000 },
+                    { month: 'Jul', revenue: 11500, cost: 7500 },
+                    { month: 'Ago', revenue: 13000, cost: 8200 },
+                    { month: 'Set', revenue: 15500, cost: 9000 },
+                    { month: 'Out', revenue: 16000, cost: 9500 },
+                    { month: 'Nov', revenue: 15200, cost: 9200 }, // Mês atual
+                ],
+                // Goals
+                goals: [
+                    { name: "Meta de Reciclagem Mensal", progress: 45, goalValue: "45.3 / 100 kg", status: "Em Progresso", color: "bg-amber-500", statusColor: "text-amber-600" },
+                    { name: "Redução CO2 Trimestral", progress: 75, goalValue: "75.04 / 200 kg CO2", status: "Em Progresso", color: "bg-secondary", statusColor: "text-secondary" },
+                    { name: "Eficiência de Coleta", progress: 73, goalValue: "73 / 85 %", status: "Atrasada", color: "bg-red-500", statusColor: "text-red-600" },
+                ],
+                // Status
+                statusPoints: [
+                    { name: "Ponto de Coleta Shopping", type: "Reciclagem", active: true, progress: 90 },
+                    { name: "Cooperativa Recicla+", type: "Logística", active: true, progress: 50 },
+                    { name: "Central de Reciclagem Norte", type: "Reciclagem", active: true, progress: 60 },
+                    { name: "São Paulo - CD", type: "Logística", active: false, progress: 40 },
+                ],
+            };
 
-        // --- CONSTANTES ---
-        const MENU_ITEMS = [
-            { name: "Visão Geral", icon: "Home" },
-            { name: "Meus Resíduos", icon: "Package" },
-            { name: "Locais", icon: "MapPin" },
-            { name: "Metas & Progresso", icon: "Target" },
-            { name: "Simulador de Impacto", icon: "Calculator" },
-            { name: "Relatórios (PDF/CSV)", icon: "FileText" },
-        ];
+            // --- CONSTANTES ---
+            const MENU_ITEMS = [
+                { name: "Visão Geral", icon: "Home" },
+                { name: "Análise de Negócios", icon: "Activity" },
+                { name: "Meus Resíduos", icon: "Package" },
+                { name: "Locais", icon: "MapPin" },
+                { name: "Metas & Progresso", icon: "Target" },
+                { name: "Simulador de Impacto", icon: "Calculator" },
+                { name: "Relatórios (PDF/CSV)", icon: "FileText" },
+            ];
 
-        // Configuração de ícones e cores por tipo de material
-        const MATERIAL_CONFIG = {
-            'Plástico': { icon: 'Package', color: 'bg-blue-100 text-blue-600', iconColor: 'text-blue-500' },
-            'Metal': { icon: 'Target', color: 'bg-gray-200 text-gray-700', iconColor: 'text-gray-600' },
-            'Eletrônicos': { icon: 'Calculator', color: 'bg-purple-100 text-purple-600', iconColor: 'text-purple-500' },
-            'Papel': { icon: 'FileText', color: 'bg-yellow-100 text-yellow-600', iconColor: 'text-yellow-500' },
-            'Vidro': { icon: 'Droplets', color: 'bg-green-100 text-green-600', iconColor: 'text-green-500' },
-        };
+            // Configuração de ícones e cores por tipo de material
+            const MATERIAL_CONFIG = {
+                'Plástico': { icon: 'Package', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400', iconColor: 'text-blue-500' },
+                'Metal': { icon: 'Target', color: 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300', iconColor: 'text-gray-400' },
+                'Eletrônicos': { icon: 'Calculator', color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400', iconColor: 'text-purple-500' },
+                'Papel': { icon: 'FileText', color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-400', iconColor: 'text-yellow-500' },
+                'Vidro': { icon: 'Droplets', color: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400', iconColor: 'text-green-500' },
+            };
 
-        // --- COMPONENTES ---
+            // --- COMPONENTES AUXILIARES ---
 
-        const Tag = ({ type, color }) => (
-            <span className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium ${color} border border-opacity-30`}>
-                {type}
-            </span>
-        );
-
-        // Componente Genérico de Ícone (Usando SVG)
-        const Icon = ({ name, className = "w-5 h-5", path }) => {
-            let svgPath;
-            if (path) {
-                svgPath = path;
-            } else {
-                switch (name) {
-                    case 'Home': svgPath = "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"; break;
-                    case 'Package': svgPath = "M16 16.5l-4-2.5-4 2.5V5.5l4-2.5 4 2.5zM12 8l4 2.5l-4 2.5L8 10zM8 5.5l4-2.5 4 2.5"; break;
-                    case 'MapPin': svgPath = "M12 2c-4 0-8 4-8 9s8 13 8 13 8-8 8-13 8-9-4-9zM12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"; break;
-                    case 'Target': svgPath = "M12 12c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z"; break;
-                    case 'Calculator': svgPath = "M18 2h-12a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"; break;
-                    case 'FileText': svgPath = "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2l6 6M10 16h4M10 12h4M10 8h4"; break;
-                    case 'Leaf': svgPath = "M12 22c-5.52 0-10-4.48-10-10S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zM12 4a8 8 0 0 0-8 8c0 4.42 3.58 8 8 8s8-3.58 8-8c0-4.42-3.58-8-8-8zM12 8l-2 4 4 2-2 4"; break;
-                    case 'Droplets': svgPath = "M10 18a2 2 0 1 0 4 0v-6a2 2 0 0 0-4 0v6zM15 11c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM9 11c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"; break;
-                    case 'Zap': svgPath = "M13 2L3 14h9l-1 8 10-12H13l1-8"; break;
-                    case 'TreePalm': svgPath = "M18 13c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM12 19c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM15 8c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM12 3c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2z"; break;
-                    case 'System': svgPath = "M4 6h16M4 12h16M4 18h16"; break;
-                    case 'X': svgPath = "M18 6L6 18M6 6l12 12"; break;
-                    case 'ChevronRight': svgPath = "M9 18l6-6-6-6"; break;
-                    default: return null;
-                }
-            }
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    <path d={svgPath} />
-                </svg>
+            const Tag = ({ type, color }) => (
+                <span className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs font-medium ${color} border border-opacity-30`}>
+                    {type}
+                </span>
             );
-        };
 
-        // Card de Métricas do Topo
-        const MetricCard = ({ title, value, change, unit, color, goal, iconPath }) => (
-            <div className="flex flex-col justify-between p-4 bg-white rounded-xl shadow-md transition duration-300 hover:shadow-lg h-full">
-                <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-semibold text-gray-500">{title}</h3>
-                    <Icon path={iconPath} className={`w-8 h-8 ${color} opacity-70 flex-shrink-0`} />
+            // Componente Genérico de Ícone (Usando SVG)
+            const Icon = ({ name, className = "w-5 h-5", path }) => {
+                let svgPath;
+                if (path) {
+                    svgPath = path;
+                } else {
+                    switch (name) {
+                        case 'Home': svgPath = "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"; break;
+                        case 'Package': svgPath = "M16 16.5l-4-2.5-4 2.5V5.5l4-2.5 4 2.5zM12 8l4 2.5l-4 2.5L8 10zM8 5.5l4-2.5 4 2.5"; break;
+                        case 'MapPin': svgPath = "M12 2c-4 0-8 4-8 9s8 13 8 13 8-8 8-13 8-9-4-9zM12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"; break;
+                        case 'Target': svgPath = "M12 12c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8z"; break;
+                        case 'Calculator': svgPath = "M18 2h-12a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"; break;
+                        case 'FileText': svgPath = "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2l6 6M10 16h4M10 12h4M10 8h4"; break;
+                        case 'Leaf': svgPath = "M12 22c-5.52 0-10-4.48-10-10S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zM12 4a8 8 0 0 0-8 8c0 4.42 3.58 8 8 8s8-3.58 8-8c0-4.42-3.58-8-8-8zM12 8l-2 4 4 2-2 4"; break;
+                        case 'Droplets': svgPath = "M10 18a2 2 0 1 0 4 0v-6a2 2 0 0 0-4 0v6zM15 11c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM9 11c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"; break;
+                        case 'Zap': svgPath = "M13 2L3 14h9l-1 8 10-12H13l1-8"; break;
+                        case 'TreePalm': svgPath = "M18 13c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM12 19c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM15 8c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2zM12 3c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2z"; break;
+                        case 'System': svgPath = "M4 6h16M4 12h16M4 18h16"; break;
+                        case 'X': svgPath = "M18 6L6 18M6 6l12 12"; break;
+                        case 'ChevronRight': svgPath = "M9 18l6-6-6-6"; break;
+                        case 'Activity': svgPath = "M22 12h-4l-3 9L9 3l-3 9H2"; break;
+                        case 'TrendingUp': svgPath = "M18 5l-8 8-4-4-4 4M14 5h4V9M18 5h4V9"; break;
+                        case 'TrendingDown': svgPath = "M18 19l-8-8-4 4-4-4M14 19h4v-4M18 19h4v-4"; break;
+                        case 'Sun': svgPath = "M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"; break;
+                        case 'Moon': svgPath = "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"; break;
+                        default: return null;
+                    }
+                }
+                return (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d={svgPath} />
+                    </svg>
+                );
+            };
+
+            // --- COMPONENTES DE ESTRUTURA E TEMA ---
+
+            const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen, isDarkMode, toggleDarkMode }) => (
+                <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-gray-900 text-white flex flex-col z-50 shadow-2xl lg:shadow-none lg:sidebar-desktop-fixed`}>
+                    <div className="p-6 text-center border-b border-gray-700">
+                        <h1 className="text-xl font-bold text-primary-400">Green Code</h1>
+                        <p className="text-xs text-gray-400 mt-1">Gestão de Reciclagem</p>
+                    </div>
+
+                    <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
+                        <p className="text-xs font-semibold text-gray-500 uppercase px-3 pt-4 pb-2">MENU PRINCIPAL</p>
+                        {MENU_ITEMS.map(item => (
+                            <button
+                                key={item.name}
+                                onClick={() => { setCurrentPage(item.name); setIsOpen(false); }}
+                                className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition duration-150 ${
+                                    currentPage === item.name
+                                        ? 'bg-primary-600 text-white shadow-lg'
+                                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                                }`}
+                            >
+                                <Icon name={item.icon} className="w-5 h-5 mr-3" />
+                                {item.name}
+                            </button>
+                        ))}
+                    </nav>
+
+                    {/* Botão de Toggle de Tema (Mobile e Desktop) */}
+                    <div className="p-4 border-t border-gray-700">
+                        <button
+                            onClick={toggleDarkMode}
+                            className="flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition duration-150"
+                        >
+                            <Icon name={isDarkMode ? 'Sun' : 'Moon'} className="w-5 h-5 mr-3" />
+                            {isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+                        </button>
+                    </div>
+
+                    {/* Botão de Fechar no Mobile (com ícone 'X' explícito) */}
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="absolute top-4 right-4 lg:hidden text-gray-400 hover:text-white"
+                    >
+                        <Icon name="X" className="w-6 h-6" /> 
+                    </button>
                 </div>
-                <div className="mt-2">
-                    {/* Tamanho da fonte ajustado para evitar corte em mobile, mantendo o impacto */}
-                    <p className="text-3xl sm:text-4xl font-extrabold text-gray-800 break-words">{value}</p>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-1 text-sm">
-                        <span className={`font-medium ${color}`}>{change}</span>
-                        <span className="text-xs text-gray-400">{unit}</span>
-                        {goal && <span className="text-xs text-purple-500 font-medium">({goal})</span>}
+            );
+            
+            // Header para Mobile e Desktop (Toggle de Menu e Tema)
+            const Header = ({ setIsOpen, toggleDarkMode, isDarkMode, currentPage }) => (
+                <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm lg:p-8">
+                    {/* Botão de Abrir Menu (Mobile) */}
+                    <button 
+                        onClick={() => setIsOpen(true)} 
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 lg:hidden"
+                    >
+                        <Icon name="System" className="w-6 h-6" />
+                    </button>
+
+                    {/* Título da Página (Mobile) */}
+                    <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 lg:hidden">
+                        {currentPage}
+                    </h2>
+
+                    {/* Título/Descrição (Desktop) - Omitido aqui para não duplicar com o título da DashboardContent */}
+
+                    {/* Botão de Tema (Desktop) */}
+                    <button 
+                        onClick={toggleDarkMode} 
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hidden lg:block"
+                    >
+                         <Icon name={isDarkMode ? 'Sun' : 'Moon'} className="w-6 h-6" />
+                    </button>
+                    
+                    {/* Placeholder para balancear (no mobile) */}
+                    <div className="w-6 lg:hidden"></div> 
+                </header>
+            );
+
+            // --- COMPONENTES DE DADOS ---
+
+            // Card de Métricas do Topo
+            const MetricCard = ({ title, value, change, unit, color, goal, iconPath }) => (
+                <div className="flex flex-col justify-between p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md transition duration-300 hover:shadow-lg dark:shadow-xl h-full border dark:border-gray-700">
+                    <div className="flex justify-between items-start">
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">{title}</h3>
+                        <Icon path={iconPath} className={`w-8 h-8 ${color} opacity-70 flex-shrink-0`} />
+                    </div>
+                    <div className="mt-2">
+                        <p className="text-3xl sm:text-4xl font-extrabold text-gray-800 dark:text-white break-words">{value}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-1 text-sm">
+                            <span className={`font-medium ${color}`}>{change}</span>
+                            <span className="text-xs text-gray-400">{unit}</span>
+                            {goal && <span className="text-xs text-purple-500 dark:text-purple-400 font-medium">({goal})</span>}
+                        </div>
+                    </div>
+                    <button className="mt-4 w-full py-1 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-500 dark:border-primary-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900 transition duration-150">
+                        Ver Detalhes
+                    </button>
+                </div>
+            );
+
+            // Card de Impacto Ambiental
+            const ImpactCard = ({ label, value, subtitle, icon, color }) => (
+                <div className="p-4 flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition duration-200 hover:shadow-md">
+                    <div className={`p-3 rounded-full ${color} mr-4 flex-shrink-0`}>
+                        <Icon name={icon} className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-xl font-bold text-gray-800 dark:text-white">{value}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{label}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{subtitle}</p>
                     </div>
                 </div>
-                <button className="mt-4 w-full py-1 text-sm font-medium text-emerald-600 border border-emerald-500 rounded-lg hover:bg-emerald-50 transition duration-150">
-                    Ver Detalhes
-                </button>
-            </div>
-        );
+            );
 
-        // Card de Impacto Ambiental
-        const ImpactCard = ({ label, value, subtitle, icon, color }) => (
-            <div className="p-4 flex items-center bg-white rounded-xl shadow-sm border border-gray-100 transition duration-200 hover:shadow-md">
-                <div className={`p-3 rounded-full ${color} mr-4 flex-shrink-0`}>
-                    <Icon name={icon} className="w-6 h-6" />
-                </div>
-                <div>
-                    <p className="text-xl font-bold text-gray-800">{value}</p>
-                    <p className="text-xs text-gray-500 font-medium">{label}</p>
-                    <p className="text-xs text-gray-400">{subtitle}</p>
-                </div>
-            </div>
-        );
+            // Linha de Atividade Recente
+            const ActivityItem = ({ activity }) => {
+                const config = MATERIAL_CONFIG[activity.type] || MATERIAL_CONFIG['Plástico'];
+                return (
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150">
+                        <div className="flex items-center">
+                            <Icon name={config.icon} className={`w-5 h-5 ${config.iconColor} mr-3 flex-shrink-0`} />
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{activity.material}</p>
+                                <div className="flex flex-wrap items-center text-xs text-gray-500 dark:text-gray-400 mt-1 space-x-2">
+                                    <Tag type={activity.type} color={config.color} />
+                                    <span className="font-semibold">{activity.quantity}</span>
+                                    <span>• {activity.location}</span>
+                                    <span className="text-gray-400 dark:text-gray-500">({activity.date})</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span className="text-sm font-semibold text-primary-600 dark:text-primary-400 mt-2 md:mt-0 md:ml-4 flex-shrink-0">
+                            {activity.co2}
+                        </span>
+                    </div>
+                );
+            };
 
-        // Barra de Progresso da Meta
-        const GoalProgressBar = ({ name, progress, goalValue, status, color, statusColor }) => (
-            <div className="p-4 bg-white rounded-lg mb-4 shadow-sm border border-gray-100">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
-                    <span className="font-semibold text-gray-700 text-sm">{name}</span>
-                    <span className={`text-xs font-medium ${statusColor} mt-1 sm:mt-0`}>{status}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                        className={`h-2.5 rounded-full ${color}`}
-                        style={{ width: `${progress}%` }}
-                    ></div>
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    <span className="font-medium">{progress}% concluído</span>
-                    <span className="font-semibold">{goalValue}</span>
-                </div>
-                <button className="mt-2 text-xs text-emerald-500 hover:underline">
-                    {status === 'Atrasada' ? 'Ajustar' : 'Revisar'} Meta
-                </button>
-            </div>
-        );
+            // Card de Análise de Negócios
+            const AnalyticsCard = ({ title, value, change, color, trend }) => {
+                const trendIcon = trend === 'up' ? 'TrendingUp' : 'TrendingDown';
+                const trendColor = trend === 'up' ? 'text-primary-500' : 'text-red-500';
 
-        // Tabela de Status de Pontos
-        const StatusPointItem = ({ name, type, active, progress }) => (
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition duration-150">
-                <div>
-                    <p className="text-sm font-medium text-gray-700">{name}</p>
-                    <p className="text-xs text-gray-400">{type}</p>
-                </div>
-                <div className="flex items-center space-x-3 mt-2 sm:mt-0">
-                    <span className={`text-xs font-semibold ${active ? 'text-emerald-500' : 'text-red-500'} w-14 text-right`}>
-                        {active ? 'Ativo' : 'Inativo'}
-                    </span>
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                return (
+                    <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md border-t-4 border-gray-100 dark:border-gray-700 hover:shadow-lg transition duration-200 dark:shadow-xl">
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">{title}</h3>
+                        <div className="flex justify-between items-center">
+                            <p className="text-3xl font-extrabold text-gray-800 dark:text-white">{value}</p>
+                            <div className={`p-2 rounded-full ${trendColor} bg-opacity-10 dark:bg-opacity-20`}>
+                                <Icon name={trendIcon} className="w-6 h-6" />
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-2 text-sm">
+                            <span className={`font-medium ${trendColor}`}>{change}</span>
+                            <span className="text-xs text-gray-400">vs. mês passado</span>
+                        </div>
+                        {/* Placeholder de gráfico de tendência simples */}
+                        <svg className="mt-3 w-full h-8" viewBox="0 0 100 20">
+                            <polyline
+                                fill="none"
+                                stroke={trend === 'up' ? "rgb(34, 197, 94)" : "rgb(239, 68, 68)"}
+                                strokeWidth="2"
+                                points={trend === 'up' ? "0,15 25,5 50,10 75,2 100,8" : "0,5 25,15 50,10 75,18 100,12"}
+                            />
+                        </svg>
+                    </div>
+                );
+            };
+
+            // Barra de Progresso da Meta
+            const GoalProgressBar = ({ name, progress, goalValue, status, color, statusColor }) => (
+                <div className="p-4 bg-white dark:bg-gray-800 rounded-lg mb-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm">{name}</span>
+                        <span className={`text-xs font-medium ${statusColor} mt-1 sm:mt-0`}>{status}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div
-                            className="bg-emerald-500 h-2 rounded-full"
+                            className={`h-2.5 rounded-full ${color}`}
                             style={{ width: `${progress}%` }}
                         ></div>
                     </div>
-                    <span className="text-xs text-gray-600 w-6 text-right">{progress}%</span>
-                </div>
-            </div>
-        );
-
-        // --- SIDEBAR E LAYOUT PRINCIPAL ---
-
-        const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => (
-            // A sidebar é fixa em telas grandes (lg) e se transforma em um menu deslizando em mobile.
-            <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-gray-900 text-white flex flex-col z-50 shadow-2xl lg:shadow-none lg:sidebar-desktop-fixed`}>
-                <div className="p-6 text-center border-b border-gray-700">
-                    <h1 className="text-xl font-bold text-emerald-400">Green Code</h1>
-                    <p className="text-xs text-gray-400 mt-1">Gestão de Reciclagem</p>
-                </div>
-
-                <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
-                    <p className="text-xs font-semibold text-gray-500 uppercase px-3 pt-4 pb-2">MENU PRINCIPAL</p>
-                    {MENU_ITEMS.map(item => (
-                        <button
-                            key={item.name}
-                            onClick={() => { setCurrentPage(item.name); setIsOpen(false); }}
-                            className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition duration-150 ${
-                                currentPage === item.name
-                                    ? 'bg-emerald-600 text-white shadow-lg'
-                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                            }`}
-                        >
-                            <Icon name={item.icon} className="w-5 h-5 mr-3" />
-                            {item.name}
-                        </button>
-                    ))}
-                </nav>
-
-                {/* Botão de Fechar no Mobile (com ícone 'X' explícito) */}
-                <button
-                    onClick={() => setIsOpen(false)}
-                    className="absolute top-4 right-4 lg:hidden text-gray-400 hover:text-white"
-                >
-                    <Icon name="X" className="w-6 h-6" /> 
-                </button>
-            </div>
-        );
-
-        // --- PÁGINA DASHBOARD (Conteúdo principal) ---
-        const DashboardContent = () => (
-            <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-                    Dashboard Ambiental
-                </h1>
-                <p className="text-gray-500 mb-8">Acompanhe o impacto positivo da sua gestão de reciclagem</p>
-
-                {/* 1. TOP METRICS GRID (Mobile: 2x2, Desktop: 4 colunas) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    {mockData.metrics.map(metric => (
-                        <MetricCard key={metric.id} {...metric} />
-                    ))}
-                </div>
-
-                {/* 2. IMPACTO HOJE (Vertical no mobile, Fixo no desktop) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                    {/* Bloco Impacto Hoje */}
-                    <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-emerald-500 flex flex-col justify-center">
-                        <h2 className="text-sm font-semibold text-emerald-600 uppercase mb-2">IMPACTO HOJE</h2>
-                        {/* Fonte maior para destaque */}
-                        <p className="text-5xl font-extrabold text-gray-900">245 kg</p>
-                        <p className="text-lg text-gray-500 mt-1">CO2 Evitado</p>
-                        <p className="text-sm text-gray-400 mt-2">Fazendo a diferença!</p>
+                    <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-medium">{progress}% concluído</span>
+                        <span className="font-semibold">{goalValue}</span>
                     </div>
-
-                    {/* Bloco Impacto Ambiental (4 cards) */}
-                    <div className="lg:col-span-2 space-y-4">
-                        <h2 className="text-xl font-semibold text-gray-800">Impacto Ambiental</h2>
-                        {/* Mobile: 1 coluna, Desktop: 2 colunas */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {mockData.impacts.map((impact, index) => (
-                                <ImpactCard key={index} {...impact} />
-                            ))}
+                    <button className="mt-2 text-xs text-primary-500 hover:underline dark:text-primary-400">
+                        {status === 'Atrasada' ? 'Ajustar' : 'Revisar'} Meta
+                    </button>
+                </div>
+            );
+            
+            // Tabela de Status de Pontos
+            const StatusPointItem = ({ name, type, active, progress }) => (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150">
+                    <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{type}</p>
+                    </div>
+                    <div className="flex items-center space-x-3 mt-2 sm:mt-0">
+                        <span className={`text-xs font-semibold ${active ? 'text-primary-500' : 'text-red-500'} w-14 text-right`}>
+                            {active ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                                className="bg-primary-500 h-2 rounded-full"
+                                style={{ width: `${progress}%` }}
+                            ></div>
                         </div>
+                        <span className="text-xs text-gray-600 dark:text-gray-300 w-6 text-right">{progress}%</span>
                     </div>
                 </div>
+            );
 
-                {/* 3. ATIVIDADE RECENTE & METAS */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Atividade Recente (Ocupa 2/3 no desktop) */}
-                    <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">Atividade Recente</h2>
-                        <div className="divide-y divide-gray-100">
-                            {mockData.activities.map((activity, index) => {
-                                // Obtém a configuração do ícone e cor pelo tipo de material
-                                const config = MATERIAL_CONFIG[activity.type] || MATERIAL_CONFIG['Plástico'];
+            // Componente de Gráfico de Evolução Mensal
+            const MonthlyEvolutionChart = ({ data }) => {
+                const width = 600;
+                const height = 250;
+                const padding = 40;
+
+                // Encontrar valores mínimos e máximos para normalização
+                const allValues = data.flatMap(d => [d.revenue, d.cost]);
+                const maxValue = Math.max(...allValues);
+                const minValue = 0;
+
+                // Funções de escala
+                const scaleX = (index) => padding + index * ((width - 2 * padding) / (data.length - 1));
+                const scaleY = (value) => height - padding - ((value - minValue) / (maxValue - minValue)) * (height - 2 * padding);
+                
+                // Formatar pontos para o SVG (Revenue)
+                const revenuePoints = data.map((d, i) => `${scaleX(i)},${scaleY(d.revenue)}`).join(' ');
+                
+                // Formatar pontos para o SVG (Cost)
+                const costPoints = data.map((d, i) => `${scaleX(i)},${scaleY(d.cost)}`).join(' ');
+
+                // Formato de valor no eixo Y (K = Milhares)
+                const formatYValue = (value) => `${(value / 1000).toFixed(0)}K`;
+
+                // Pontos para o eixo Y (4 linhas de grade: min, 1/3, 2/3, max)
+                const yAxisValues = [
+                    minValue,
+                    minValue + (maxValue - minValue) * 0.33,
+                    minValue + (maxValue - minValue) * 0.66,
+                    maxValue
+                ];
+
+                return (
+                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+                        {/* Linhas de grade e Eixo Y */}
+                        {yAxisValues.map((value, index) => (
+                            <g key={`y-axis-${index}`}>
+                                <line 
+                                    x1={padding} 
+                                    y1={scaleY(value)} 
+                                    x2={width - padding} 
+                                    y2={scaleY(value)} 
+                                    stroke="#e5e7eb" 
+                                    className="dark:stroke-gray-600"
+                                    strokeDasharray={index === 0 || index === yAxisValues.length - 1 ? "none" : "3 3"}
+                                />
+                                <text 
+                                    x={padding - 5} 
+                                    y={scaleY(value)} 
+                                    dominantBaseline="middle" 
+                                    textAnchor="end" 
+                                    fontSize="10" 
+                                    fill="#6b7280"
+                                    className="dark:fill-gray-400"
+                                >
+                                    {formatYValue(value)}
+                                </text>
+                            </g>
+                        ))}
+
+                        {/* Linha de Receita (Primary Green) */}
+                        <polyline fill="none" stroke="#22c55e" strokeWidth="2" points={revenuePoints} />
+                        
+                        {/* Linha de Custo (Amber/Yellow) */}
+                        <polyline fill="none" stroke="#f59e0b" strokeWidth="2" points={costPoints} />
+
+                        {/* Pontos e Eixo X (Meses) */}
+                        {data.map((d, i) => (
+                            <g key={`point-${i}`}>
+                                {/* Ponto de Receita */}
+                                <circle cx={scaleX(i)} cy={scaleY(d.revenue)} r="4" fill="#22c55e" />
+                                {/* Ponto de Custo */}
+                                <circle cx={scaleX(i)} cy={scaleY(d.cost)} r="4" fill="#f59e0b" />
                                 
-                                return (
-                                    <div key={index} className="flex flex-col md:flex-row justify-between items-start md:items-center py-4 hover:bg-gray-50 transition duration-150">
-                                        <div className="flex items-center">
-                                            <Icon name={config.icon} className={`w-5 h-5 ${config.iconColor} mr-3 flex-shrink-0`} />
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-700">{activity.material}</p>
-                                                <div className="flex flex-wrap items-center text-xs text-gray-500 mt-1 space-x-2">
-                                                    <Tag type={activity.type} color={config.color} />
-                                                    <span className="font-semibold">{activity.quantity}</span>
-                                                    {/* Localização e data visíveis em todas as telas, mas organizadas */}
-                                                    <span>• {activity.location}</span>
-                                                    <span className="text-gray-400">({activity.date})</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* A informação de CO2 sempre fica alinhada à direita em telas maiores */}
-                                        <span className="text-sm font-semibold text-green-600 mt-2 md:mt-0 md:ml-4 flex-shrink-0">
-                                            {activity.co2}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                            <button className="mt-4 w-full text-center py-2 text-sm text-emerald-600 font-medium hover:bg-emerald-50 rounded-lg">
-                                Ver Histórico Completo <Icon name="ChevronRight" className="w-4 h-4 inline ml-1" />
-                            </button>
-                        </div>
+                                {/* Labels de Mês no Eixo X */}
+                                <text 
+                                    x={scaleX(i)} 
+                                    y={height - padding + 15} 
+                                    textAnchor="middle" 
+                                    fontSize="10" 
+                                    fill="#4b5563"
+                                    className="dark:fill-gray-300"
+                                >
+                                    {d.month}
+                                </text>
+                            </g>
+                        ))}
+
+                        {/* Legenda (Oculta se houver legenda externa) */}
+                        {/* Mantendo a legenda interna como fallback/detalhe */}
+                        <g transform={`translate(${width - padding * 2}, ${padding / 2})`} fontSize="10" fill="#4b5563" className="dark:fill-gray-300">
+                            <circle cx="0" cy="0" r="3" fill="#22c55e" />
+                            <text x="7" y="0" dominantBaseline="middle">Receita</text>
+                            <circle cx="0" cy="15" r="3" fill="#f59e0b" />
+                            <text x="7" y="15" dominantBaseline="middle">Custo</text>
+                        </g>
+                    </svg>
+                );
+            };
+
+            // --- PÁGINAS DE CONTEÚDO ---
+
+            // Página Visão Geral (Dashboard)
+            const DashboardContent = () => (
+                <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+                        Dashboard Ambiental
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">Acompanhe o impacto positivo da sua gestão de reciclagem</p>
+
+                    {/* 1. TOP METRICS GRID (Mobile: 2x2, Desktop: 4 colunas) */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        {mockData.metrics.map(metric => (
+                            <MetricCard key={metric.id} {...metric} />
+                        ))}
                     </div>
 
-                    {/* Progresso das Metas e Status dos Pontos (Ocupa 1/3 no desktop) */}
-                    <div className="space-y-8">
-                        {/* Progresso das Metas */}
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Progresso das Metas</h2>
-                            {mockData.goals.map((goal, index) => (
-                                <GoalProgressBar key={index} {...goal} />
-                            ))}
+                    {/* 2. IMPACTO HOJE (Vertical no mobile, Fixo no desktop) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                        {/* Bloco Impacto Hoje */}
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-t-4 border-primary-500 flex flex-col justify-center dark:border-primary-600">
+                            <h2 className="text-sm font-semibold text-primary-600 dark:text-primary-400 uppercase mb-2">IMPACTO HOJE</h2>
+                            <p className="text-5xl font-extrabold text-gray-900 dark:text-white">245 kg</p>
+                            <p className="text-lg text-gray-500 dark:text-gray-400 mt-1">CO2 Evitado</p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Fazendo a diferença!</p>
                         </div>
 
-                        {/* Status dos Pontos */}
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Status dos Pontos</h2>
-                            <div className="divide-y divide-gray-100">
-                                {mockData.statusPoints.map((point, index) => (
-                                    <StatusPointItem key={index} {...point} />
+                        {/* Bloco Impacto Ambiental (4 cards) */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Impacto Ambiental</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {mockData.impacts.map((impact, index) => (
+                                    <ImpactCard key={index} {...impact} />
                                 ))}
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        );
 
-        // Componente auxiliar para as páginas placeholder
-        const PlaceholderContent = ({ title, children, setCurrentPage }) => (
-            <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{title}</h1>
-                <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-emerald-500">
-                    {children}
+                    {/* 3. ATIVIDADE RECENTE & ANÁLISE DE NEGÓCIOS */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Atividade Recente (Ocupa 2/3 no desktop) */}
+                        <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
+                            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Atividade Recente</h2>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {mockData.activities.map((activity, index) => (
+                                    <ActivityItem key={index} activity={activity} />
+                                ))}
+                                <button className="mt-4 w-full text-center py-2 text-sm text-primary-600 dark:text-primary-400 font-medium hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition duration-150">
+                                    Ver Histórico Completo <Icon name="ChevronRight" className="w-4 h-4 inline ml-1" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Análise de Negócios (Ocupa 1/3 no desktop) */}
+                        <div className="space-y-4">
+                            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
+                                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Análise de Negócios</h2>
+                                <div className="space-y-4">
+                                    {mockData.businessData.map(data => (
+                                        <AnalyticsCard key={data.id} {...data} />
+                                    ))}
+                                </div>
+                                <button onClick={() => setCurrentPage('Análise de Negócios')} className="mt-4 w-full text-sm text-secondary hover:underline dark:text-blue-400">
+                                    Ver Análise Detalhada
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+
+            // Página Análise de Negócios
+            const BusinessAnalyticsContent = ({ setCurrentPage }) => (
+                <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+                        Análise de Negócios
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">
+                        Monitore a saúde financeira e o crescimento da sua base de usuários.
+                    </p>
+
+                    {/* Grid de KPIs de Negócios */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        {mockData.businessData.map(data => (
+                            <AnalyticsCard key={data.id} {...data} />
+                        ))}
+                    </div>
+
+                    {/* Gráfico de Evolução Mensal */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Evolução Mensal (Receita vs. Custo)</h2>
+                        <MonthlyEvolutionChart data={mockData.monthlyEvolution} />
+
+                        <div className="mt-6 flex justify-center space-x-6 text-sm">
+                            <div className="flex items-center space-x-1">
+                                <span className="w-3 h-3 rounded-full bg-primary-500"></span>
+                                <span className="text-gray-600 dark:text-gray-300">Receita</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                                <span className="text-gray-600 dark:text-gray-300">Custo</span>
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 border-t pt-4 dark:border-gray-700">
+                            A receita (linha verde) demonstrou um crescimento de 12% no último trimestre, impulsionada pelo aumento de novos contratos de coleta empresarial. O custo (linha amarela) manteve-se estável em relação ao aumento de volume.
+                        </p>
+                    </div>
+                    
                     <button
-                        className="mt-6 text-sm text-emerald-500 font-medium hover:underline"
+                        className="mt-6 text-sm text-secondary hover:underline dark:text-blue-400"
                         onClick={() => setCurrentPage('Visão Geral')}
                     >
                         &larr; Voltar para a Visão Geral
                     </button>
                 </div>
-            </div>
-        );
+            );
 
-        // Renderiza o conteúdo da página selecionada
-        const renderContent = (currentPage, setCurrentPage) => {
-            switch (currentPage) {
-                case 'Visão Geral':
-                    return <DashboardContent />;
-                
-                case 'Meus Resíduos':
-                    return (
-                        <PlaceholderContent title="Meus Resíduos: Rastreabilidade e Logística" setCurrentPage={setCurrentPage}>
-                            <p className="text-lg font-semibold text-gray-700 mb-3">Gestão de Lotes por Tecnologia Blockchain</p>
-                            <p className="text-gray-600 mb-4">
-                                Nesta seção, você pode cadastrar todos os tipos de resíduos gerados pela sua empresa (Plástico, Metal, Vidro, Eletrônicos) e acompanhar seu status em tempo real. Cada lote recebe uma identificação única (ID: XZ-8451-ABC) e é rastreado via GPS desde o agendamento até a destinação final. Nossa plataforma garante que 100% do material seja processado por cooperativas certificadas.
-                            </p>
-                            <button className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition duration-150 shadow-md">
-                                + Agendar Nova Coleta
-                            </button>
-                        </PlaceholderContent>
-                    );
+            // Página Metas & Progresso
+            const GoalsContent = ({ setCurrentPage }) => (
+                <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+                        Metas & Progresso: Objetivos de Sustentabilidade
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">Acompanhe seu desempenho em relação aos objetivos anuais de reciclagem.</p>
 
-                case 'Locais':
-                    return (
-                        <PlaceholderContent title="Locais: Pontos de Coleta e Centrais de Processamento" setCurrentPage={setCurrentPage}>
-                            <p className="text-lg font-semibold text-gray-700 mb-3">Rede Geográfica Otimizada</p>
-                            <p className="text-gray-600 mb-4">
-                                A Green Code opera com 15 Pontos de Coleta Inteligentes espalhados pela Grande São Paulo e 3 Centrais de Processamento Parceiras. Use o mapa interativo aqui para encontrar o ponto mais próximo, verificar o horário de funcionamento (8h às 18h, de Seg a Sex) e ver quais tipos de resíduos são aceitos em cada local. A otimização logística reduz o custo de transporte em até 25%.
-                            </p>
-                            <div className="bg-gray-200 h-64 flex items-center justify-center rounded-lg text-gray-500 font-medium border border-dashed border-gray-400">
-                                 [ Placeholder para Mapa Interativo com Pins ]
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Progresso das Metas (Main Block) */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Metas Principais</h2>
+                            <div className="space-y-4">
+                                {mockData.goals.map((goal, index) => (
+                                    <GoalProgressBar key={index} {...goal} />
+                                ))}
                             </div>
-                        </PlaceholderContent>
-                    );
-
-                case 'Metas & Progresso':
-                    return (
-                        <PlaceholderContent title="Metas & Progresso: Objetivos de Sustentabilidade" setCurrentPage={setCurrentPage}>
-                            <p className="text-lg font-semibold text-gray-700 mb-3">Plano 2024-2025: Rumo ao Lixo Zero</p>
-                            <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4 mb-4">
-                                <li>Meta Principal: Atingir 90% de Taxa de Desvio de Aterro até o final do ano fiscal.</li>
-                                <li>Metas de CO2: Redução trimestral de 5% nas emissões indiretas através da coleta otimizada.</li>
-                                <li>Ações de Engajamento: Realizar 4 workshops de conscientização com os colaboradores.</li>
-                            </ul>
-                            <p className="text-gray-600">Acompanhe seus KPIs (Key Performance Indicators) detalhados e ajuste seus objetivos de reciclagem para garantir que sua empresa atinja o certificado "Green Seal" de sustentabilidade.</p>
-                        </PlaceholderContent>
-                    );
-
-                case 'Simulador de Impacto':
-                    return (
-                        <PlaceholderContent title="Simulador de Impacto Ambiental (BETA)" setCurrentPage={setCurrentPage}>
-                            <p className="text-lg font-semibold text-gray-700 mb-3">Descubra o Poder da Reciclagem</p>
-                            <p className="text-gray-600 mb-4">
-                                Insira a quantidade de resíduos (em kg) que você planeja reciclar no próximo mês e nosso modelo preditivo calculará o impacto ambiental correspondente: Litros de Água Poupadada, KWh de Energia Economizada e o equivalente em Árvores Plantadas. Por exemplo, 100 kg de alumínio evitam a emissão de 1.800 kg de CO2!
+                            <p className="text-gray-600 dark:text-gray-400 mt-4">
+                                O plano 2024-2025 foca em atingir 90% de Taxa de Desvio de Aterro. Monitore seus KPIs (Key Performance Indicators) detalhados e ajuste seus objetivos para garantir a certificação "Green Seal".
                             </p>
-                            <button className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition duration-150 shadow-md">
-                                Iniciar Simulação
+                            <button className="px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition duration-150 shadow-md">
+                                Gerenciar Objetivos Anuais
                             </button>
-                        </PlaceholderContent>
-                    );
+                        </div>
 
-                case 'Relatórios (PDF/CSV)':
-                    return (
-                        <PlaceholderContent title="Relatórios: Certificação e Documentação Legal" setCurrentPage={setCurrentPage}>
-                            <p className="text-lg font-semibold text-gray-700 mb-3">Download de Documentos Fiscais e Ambientais</p>
-                            <p className="text-gray-600 mb-4">
-                                Gere e baixe seus relatórios anuais de sustentabilidade, certificados de destinação correta de resíduos (CDR) e documentos fiscais de logística reversa. Todos os relatórios são auditáveis e contêm dados assinados digitalmente para comprovar sua conformidade ambiental.
-                            </p>
-                            <button className="px-4 py-2 bg-purple-500 text-white font-medium rounded-lg hover:bg-purple-600 transition duration-150 shadow-md">
-                                Gerar Relatório Anual (PDF)
-                            </button>
-                        </PlaceholderContent>
-                    );
+                        {/* Status dos Pontos (Side Block) */}
+                        <div className="space-y-8">
+                            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
+                                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Status da Rede de Coleta</h2>
+                                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {mockData.statusPoints.map((point, index) => (
+                                        <StatusPointItem key={index} {...point} />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                default:
-                    return <DashboardContent />;
-            }
-        };
+                    <button
+                        className="mt-6 text-sm text-secondary hover:underline dark:text-blue-400"
+                        onClick={() => setCurrentPage('Visão Geral')}
+                    >
+                        &larr; Voltar para a Visão Geral
+                    </button>
+                </div>
+            );
 
-
-        const App = () => {
-            const [currentPage, setCurrentPage] = useState('Visão Geral');
-            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-            return (
-                <div className="flex h-screen bg-gray-100 w-full">
-                    {/* Sidebar (Navegação) */}
-                    <Sidebar
-                        currentPage={currentPage}
-                        setCurrentPage={setCurrentPage}
-                        isOpen={isSidebarOpen}
-                        setIsOpen={setIsSidebarOpen}
-                    />
-
-                    {/* Conteúdo Principal e Header */}
-                    {/* A margem esquerda (lg:ml-64) no desktop garante que o conteúdo não fique escondido sob a sidebar fixa */}
-                    <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-                        {/* Mobile Header/Toggle */}
-                        <header className="flex items-center justify-between p-4 bg-white border-b border-gray-200 lg:hidden shadow-sm">
-                            <button onClick={() => setIsSidebarOpen(true)} className="text-gray-500 hover:text-gray-700">
-                                <Icon name="System" className="w-6 h-6" />
-                            </button>
-                            <h2 className="text-lg font-bold text-gray-800">Green Code</h2>
-                            <div className="w-6"></div> {/* Placeholder for balance */}
-                        </header>
-
-                        {/* Conteúdo */}
-                        <main className="flex-1 overflow-x-hidden overflow-y-auto">
-                            {renderContent(currentPage, setCurrentPage)}
-                        </main>
+            // Componente auxiliar para as páginas placeholder (simuladas)
+            const PlaceholderContent = ({ title, children, setCurrentPage }) => (
+                <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">{title}</h1>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-l-4 border-primary-500 dark:border-primary-600">
+                        {children}
+                        <button
+                            className="mt-6 text-sm text-secondary hover:underline dark:text-blue-400"
+                            onClick={() => setCurrentPage('Visão Geral')}
+                        >
+                            &larr; Voltar para a Visão Geral
+                        </button>
                     </div>
                 </div>
             );
-        };
 
-        root.render(<App />);
+            // Conteúdo Simulado
+            const MyWasteContent = (props) => (
+                <PlaceholderContent title="Meus Resíduos: Rastreabilidade e Logística" {...props}>
+                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">Gestão de Lotes por Tecnologia Blockchain</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        Nesta seção, você pode cadastrar todos os tipos de resíduos gerados pela sua empresa (Plástico, Metal, Vidro, Eletrônicos) e acompanhar seu status em tempo real. Cada lote recebe uma identificação única (ID: XZ-8451-ABC) e é rastreado via GPS desde o agendamento até a destinação final. Nossa plataforma garante que 100% do material seja processado por cooperativas certificadas.
+                    </p>
+                    <div className="space-y-4 border p-4 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <input type="text" placeholder="Nome do Lote / ID" className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        <select className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <option>Selecione o Tipo de Material</option>
+                            <option>Plástico</option>
+                            <option>Metal</option>
+                            <option>Eletrônicos</option>
+                        </select>
+                    </div>
+                    <button className="mt-4 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition duration-150 shadow-md">
+                        + Agendar Nova Coleta
+                    </button>
+                </PlaceholderContent>
+            );
+
+            const LocationsContent = (props) => (
+                <PlaceholderContent title="Locais: Pontos de Coleta e Centrais de Processamento" {...props}>
+                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">Rede Geográfica Otimizada</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        A Green Code opera com 15 Pontos de Coleta Inteligentes espalhados pela Grande São Paulo e 3 Centrais de Processamento Parceiras. Use o mapa interativo aqui para encontrar o ponto mais próximo, verificar o horário de funcionamento (8h às 18h, de Seg a Sex) e ver quais tipos de resíduos são aceitos em cada local. A otimização logística reduz o custo de transporte em até 25%.
+                    </p>
+                    <div className="bg-gray-200 dark:bg-gray-700 h-64 flex items-center justify-center rounded-lg text-gray-500 font-medium border border-dashed border-gray-400 dark:border-gray-600">
+                        [ Placeholder para Mapa Interativo com Pins ]
+                    </div>
+                    <button className="mt-4 px-4 py-2 bg-secondary text-white font-medium rounded-lg hover:bg-blue-600 transition duration-150 shadow-md">
+                        Buscar Ponto Mais Próximo
+                    </button>
+                </PlaceholderContent>
+            );
+
+            const SimulatorContent = (props) => (
+                <PlaceholderContent title="Simulador de Impacto Ambiental (BETA)" {...props}>
+                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">Descubra o Poder da Reciclagem</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        Insira a quantidade de resíduos (em kg) que você planeja reciclar no próximo mês e nosso modelo preditivo calculará o impacto ambiental correspondente: Litros de Água Poupadada, KWh de Energia Economizada e o equivalente em Árvores Plantadas.
+                    </p>
+                    <div className="space-y-4 border p-4 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                        <input type="number" placeholder="Quantidade de Resíduo (em kg)" className="w-full p-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mt-4">Resultado Simulado:</p>
+                        <ul className="text-gray-600 dark:text-gray-400 list-disc list-inside ml-4">
+                            <li>**Água Poupadada:** 500 L</li>
+                            <li>**CO2 Evitado:** 90 kg</li>
+                            <li>**Equiv. Árvores:** 2.5</li>
+                        </ul>
+                    </div>
+                    <button className="mt-4 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition duration-150 shadow-md">
+                        Iniciar Simulação
+                    </button>
+                </PlaceholderContent>
+            );
+
+            const ReportsContent = (props) => (
+                <PlaceholderContent title="Relatórios: Certificação e Documentação Legal" {...props}>
+                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">Download de Documentos Fiscais e Ambientais</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        Gere e baixe seus relatórios anuais de sustentabilidade, certificados de destinação correta de resíduos (CDR) e documentos fiscais de logística reversa. Todos os relatórios são auditáveis e contêm dados assinados digitalmente para comprovar sua conformidade ambiental.
+                    </p>
+                    <div className="flex space-x-4">
+                        <button className="px-4 py-2 bg-purple-500 text-white font-medium rounded-lg hover:bg-purple-600 transition duration-150 shadow-md">
+                            Gerar Relatório Anual (PDF)
+                        </button>
+                        <button className="px-4 py-2 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition duration-150 shadow-md">
+                            Download CSV Completo
+                        </button>
+                    </div>
+                </PlaceholderContent>
+            );
+
+            // Renderiza o conteúdo da página selecionada
+            const renderContent = (currentPage, setCurrentPage) => {
+                switch (currentPage) {
+                    case 'Visão Geral':
+                        return <DashboardContent setCurrentPage={setCurrentPage} />;
+                    case 'Análise de Negócios':
+                        return <BusinessAnalyticsContent setCurrentPage={setCurrentPage} />;
+                    case 'Metas & Progresso':
+                        return <GoalsContent setCurrentPage={setCurrentPage} />;
+                    case 'Meus Resíduos':
+                        return <MyWasteContent setCurrentPage={setCurrentPage} />;
+                    case 'Locais':
+                        return <LocationsContent setCurrentPage={setCurrentPage} />;
+                    case 'Simulador de Impacto':
+                        return <SimulatorContent setCurrentPage={setCurrentPage} />;
+                    case 'Relatórios (PDF/CSV)':
+                        return <ReportsContent setCurrentPage={setCurrentPage} />;
+                    default:
+                        return <DashboardContent setCurrentPage={setCurrentPage} />;
+                }
+            };
+
+
+            const App = () => {
+                const [currentPage, setCurrentPage] = useState('Visão Geral');
+                const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+                const [isDarkMode, setIsDarkMode] = useState(false);
+
+                // Efeito para aplicar a classe 'dark' ao elemento HTML (Gatilho do Tailwind)
+                useEffect(() => {
+                    if (isDarkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }, [isDarkMode]);
+
+                const toggleDarkMode = () => setIsDarkMode(prev => !prev);
+
+                return (
+                    // Fundo da aplicação: usa a cor base definida pelo tema
+                    <div className="flex h-screen w-full bg-gray-100 dark:bg-gray-900">
+                        
+                        {/* Sidebar (Navegação) */}
+                        <Sidebar
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            isOpen={isSidebarOpen}
+                            setIsOpen={setIsSidebarOpen}
+                            isDarkMode={isDarkMode}
+                            toggleDarkMode={toggleDarkMode}
+                        />
+
+                        {/* Conteúdo Principal e Header */}
+                        {/* A margem esquerda (lg:ml-64) no desktop garante que o conteúdo não fique escondido sob a sidebar fixa */}
+                        <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+                             {/* Header (Para Mobile e Desktop) */}
+                            <Header 
+                                setIsOpen={setIsSidebarOpen} 
+                                toggleDarkMode={toggleDarkMode} 
+                                isDarkMode={isDarkMode}
+                                currentPage={currentPage}
+                            />
+                            
+                            {/* Conteúdo da Página */}
+                            <main className="flex-1 overflow-x-hidden overflow-y-auto">
+                                {renderContent(currentPage, setCurrentPage)}
+                            </main>
+                        </div>
+                    </div>
+                );
+            };
+
+            root.render(<App />);
+        };
     </script>
 </body>
 </html>
-
