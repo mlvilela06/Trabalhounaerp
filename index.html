@@ -51,6 +51,32 @@
                 height: 100%;
             }
         }
+        /* Estilos de tabela básicos para o documento de OKR */
+        .okr-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .okr-table th, .okr-table td {
+            border: 1px solid #e5e7eb; /* dark:border-gray-600 */
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .dark .okr-table th, .dark .okr-table td {
+             border-color: #4b5563; /* dark:border-gray-600 */
+        }
+        .okr-table th {
+            background-color: #f3f4f6; /* dark:bg-gray-700 */
+            font-weight: 600;
+        }
+        .dark .okr-table th {
+            background-color: #374151; /* dark:bg-gray-700 */
+        }
+        .okr-table tr:nth-child(even) {
+            background-color: #f9fafb; /* dark:bg-gray-800 */
+        }
+        .dark .okr-table tr:nth-child(even) {
+            background-color: #1f2937; /* dark:bg-gray-800 */
+        }
     </style>
 </head>
 <body>
@@ -115,16 +141,32 @@
                     { name: "Central de Reciclagem Norte", type: "Reciclagem", active: true, progress: 60 },
                     { name: "São Paulo - CD", type: "Logística", active: false, progress: 40 },
                 ],
+                // OKR Data for Strategy Page
+                okrData: [
+                    { category: 'Operações', objective: 'O1: Estabelecer um padrão de excelência operacional, atingindo a máxima eficiência na coleta.', krs: [
+                        { kr: 'KR 1.1: Atingir 85% na Taxa de Reciclagem (Atual 60%).', metric: 'Taxa de Reciclagem' },
+                        { kr: 'KR 1.2: Reduzir a ineficiência de coleta (tempo/recursos) de 73% para 60%.', metric: 'Eficiência de Coleta' }
+                    ]},
+                    { category: 'Clientes', objective: 'O2: Acelerar o crescimento da base de clientes B2B, garantindo a saúde financeira.', krs: [
+                        { kr: 'KR 2.1: Aumentar o número de Usuários Ativos (Clientes) de 458 para 550 (+20%).', metric: 'Usuários Ativos' },
+                        { kr: 'KR 2.2: Aumentar o Lucro Líquido Mensal (pico) para R$ 20.000.', metric: 'Lucro Líquido (Mês)' }
+                    ]},
+                    { category: 'Produto', objective: 'O3: Validar o impacto da inteligência de dados no engajamento dos clientes.', krs: [
+                        { kr: 'KR 3.1: Aumentar em 40% as Visitas no Site na página do Simulador de Impacto.', metric: 'Visitas no Site' },
+                        { kr: 'KR 3.2: Registrar um NPS (Net Promoter Score) médio de 75.', metric: 'Métrica de Retenção' }
+                    ]}
+                ]
             };
 
             // --- CONSTANTES ---
             const MENU_ITEMS = [
                 { name: "Visão Geral", icon: "Home" },
                 { name: "Análise de Negócios", icon: "Activity" },
+                { name: "Estratégia & OKRs", icon: "Target" }, // Nova Aba
                 { name: "Meus Resíduos", icon: "Package" },
                 { name: "Locais", icon: "MapPin" },
-                { name: "Metas & Progresso", icon: "Target" },
-                { name: "Simulador de Impacto", icon: "Calculator" },
+                { name: "Metas & Progresso", icon: "Calculator" }, // Mantendo icon para evitar quebra
+                { name: "Simulador de Impacto", icon: "FileText" }, // Mantendo icon para evitar quebra
                 { name: "Relatórios (PDF/CSV)", icon: "FileText" },
             ];
 
@@ -607,7 +649,7 @@
                             {/* Bloco Data-Driven */}
                             <div className="mt-6 pt-4 border-t dark:border-gray-700">
                                 <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Estratégia e Cultura Data-Driven</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                                <p className="text-gray-600 dark:text-gray-400 space-y-2 text-sm">
                                     <p>data-driven é usar dados para decidir. Defina métricas norte (North Star Metric) e indicadores como CAC, LTV, churn, retenção e NPS.</p>
                                     <p>Instrumente campanhas com UTMs e monitore funil (aquisição &rarr; ativação &rarr; retenção &rarr; receita &rarr; referral). Dashboards em Looker Studio consolidam fontes como GA4, planilhas de vendas e, quando aplicável, BigQuery. A cada sprint, rode o ciclo HADI (Hipótese&ndash;Ação&ndash;Dados&ndash;Insights) e documente aprendizados.</p>
                                 </p>
@@ -618,6 +660,7 @@
                         <div className="space-y-4">
                             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
                                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Meta Mensal de Reciclagem</h2>
+                                {/* A meta 0 (Meta de Reciclagem Mensal) é a meta que foi adicionada aqui */}
                                 <GoalProgressBar {...mockData.goals[0]} />
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                                     Foco em atingir 100% da meta de material coletado no mês para garantir o bônus de eficiência. Acompanhe na página "Metas & Progresso" para mais detalhes.
@@ -686,6 +729,80 @@
                     </button>
                 </div>
             );
+
+            // Conteúdo Estratégia & OKRs (NOVA PÁGINA)
+            const StrategyContent = ({ setCurrentPage }) => (
+                <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">
+                        Estratégia & OKRs: Crescimento e Metas
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">
+                        Documentação estratégica para alinhamento de equipe e monitoramento de progresso de alto nível.
+                    </p>
+
+                    {/* Mapa de Escalabilidade */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl mb-8">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Mapa de Escalabilidade: Rotas de Crescimento</h2>
+                        
+                        <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
+                            <p className="font-semibold text-lg">I. Rotas Principais:</p>
+                            <ul className="list-disc list-inside ml-4 space-y-2">
+                                <li>**Expansão Geográfica:** Focar em novos mercados metropolitanos (KPIs: Usuários Ativos, Pontos de Coleta).</li>
+                                <li>**Verticalização de Serviços:** Adicionar fluxos de alto valor (Ex: Resíduos Eletrônicos). (KPIs: Material Coletado, ARPU).</li>
+                                <li>**Monetização de Dados:** Vender relatórios ESG premium. (KPIs: Lucro Líquido, Retenção).</li>
+                                <li>**Inovação Tecnológica:** Implementar rastreamento e sensores. (KPIs: Eficiência de Coleta, CO2 Evitado).</li>
+                            </ul>
+
+                            <p className="font-semibold text-lg pt-4 border-t dark:border-gray-700">II. Riscos Críticos:</p>
+                            <ul className="list-disc list-inside ml-4 space-y-2">
+                                <li>**Logístico:** Risco de saturação da rede de parceiros (Mitigação: Homologação contínua de 5 novos parceiros/trimestre).</li>
+                                <li>**Mercado/Vendas:** Alto Custo de Aquisição de Cliente (Mitigação: Foco em estratégias de Retenção e Referral).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Tabela de OKRs */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md dark:shadow-xl">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">OKRs - Ciclo 1 (Próximo Trimestre)</h2>
+                        <table className="okr-table w-full text-sm text-gray-700 dark:text-gray-300">
+                            <thead>
+                                <tr>
+                                    <th>Categoria</th>
+                                    <th>Objetivo (O)</th>
+                                    <th>Resultado Chave (KR)</th>
+                                    <th>Métrica Base</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mockData.okrData.map((data, index) => (
+                                    <React.Fragment key={index}>
+                                        <tr className="border-t dark:border-gray-700">
+                                            <td rowSpan={data.krs.length} className="font-bold bg-gray-50 dark:bg-gray-700">{data.category}</td>
+                                            <td rowSpan={data.krs.length}>{data.objective}</td>
+                                            <td>{data.krs[0].kr}</td>
+                                            <td>{data.krs[0].metric}</td>
+                                        </tr>
+                                        {data.krs.slice(1).map((krItem, krIndex) => (
+                                            <tr key={`${index}-${krIndex}`}>
+                                                <td>{krItem.kr}</td>
+                                                <td>{krItem.metric}</td>
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <button
+                        className="mt-6 text-sm text-secondary hover:underline dark:text-blue-400"
+                        onClick={() => setCurrentPage('Visão Geral')}
+                    >
+                        &larr; Voltar para a Visão Geral
+                    </button>
+                </div>
+            );
+
 
             // Componente auxiliar para as páginas placeholder (simuladas)
             const PlaceholderContent = ({ title, children, setCurrentPage }) => (
@@ -787,6 +904,8 @@
                         return <BusinessAnalyticsContent setCurrentPage={setCurrentPage} />;
                     case 'Metas & Progresso':
                         return <GoalsContent setCurrentPage={setCurrentPage} />;
+                    case 'Estratégia & OKRs':
+                        return <StrategyContent setCurrentPage={setCurrentPage} />; // Nova página de Estratégia
                     case 'Meus Resíduos':
                         return <MyWasteContent setCurrentPage={setCurrentPage} />;
                     case 'Locais':
